@@ -2,13 +2,18 @@
 
 Reads two result JSONs (both from run_evals.py with `details` recorded):
   - Our Vector AO run (positional arg)
-  - LoRA AO baseline (--baseline, default lora_baseline_full_v2.json)
+  - LoRA AO baseline (--baseline, default ckpts/lora_baseline_fa2.json)
 
-Emits two PNGs that share a prefix: `{prefix}_taboo.png` (exact + semantic-nearby
-stacked) and `{prefix}_personaqa.png` (open-ended + y/n flat accuracy).
+Emits up to three PNGs sharing a prefix:
+  - `{prefix}_taboo.png` (exact + semantic-nearby stacked)
+  - `{prefix}_personaqa.png` (open-ended + y/n flat accuracy)
+  - `{prefix}_priming.png` (PQA-open default vs primed, one best-in-sweep
+    prime per oracle — Vector AO default uses `personaqa_primed` inside
+    --results; LoRA AO default uses a separate --baseline-primed file
+    where the winning prime is the run's default prompt)
 
 Usage:
-    python prelim-report/make_figures.py prelim-report/ckpts/full-mix-7.results.json
+    python prelim-report/make_figures.py prelim-report/ckpts/full-mix-7.results.json.zst
 """
 
 import argparse
@@ -257,16 +262,42 @@ def _plot_priming(ours_base, ours_primed, base_base, base_primed,
     print(f"wrote {outpath}")
 
 
-def _priming_description(d):
+def _priming_description(d, from_primed_block):
+    """Meta→human-readable primed-prompt description.
+
+    Two source modes, because run_evals.py writes two different shapes:
+    - Single run with `--primed-pqa-*` flags set: the primed data lives under
+      `personaqa_primed` and the meta keys are `primed_pqa_*`.
+    - A whole separate run with `--pqa-*` flags set (the winning prime as the
+      run's default): the primed data is just `personaqa` and the meta keys
+      are `pqa_*` (no `primed_` prefix).
+    """
     m = d.get("meta", {})
+    prefix = "primed_pqa_" if from_primed_block else "pqa_"
     bits = []
-    if m.get("primed_pqa_user_text"):
-        bits.append(f"user: {m['primed_pqa_user_text']!r}")
-    if m.get("primed_pqa_think_body"):
-        bits.append(f"<think>: {m['primed_pqa_think_body']!r}")
-    if m.get("primed_pqa_answer"):
-        bits.append(f"answer: {m['primed_pqa_answer']!r}")
+    if m.get(f"{prefix}user_text"):
+        bits.append(f"user: {m[f'{prefix}user_text']!r}")
+    if m.get(f"{prefix}think_body"):
+        bits.append(f"<think>: {m[f'{prefix}think_body']!r}")
+    if m.get(f"{prefix}answer"):
+        bits.append(f"answer: {m[f'{prefix}answer']!r}")
     return "; ".join(bits)
+
+
+def _load_primed(main_run, primed_path):
+    """Return (accuracy, description) for the primed open-ended PQA point.
+
+    If `primed_path` is given, load that JSON and pull the primed value from
+    its `personaqa.accuracy` (the whole run used the winning prime as its
+    default — see `archived/lora_thirdperson_think.results.json.zst`).
+    Otherwise fall back to `personaqa_primed` inside `main_run`.
+    """
+    if primed_path:
+        d = load_json(primed_path)
+        acc = d.get("personaqa", {}).get("accuracy")
+        return acc, _priming_description(d, from_primed_block=False)
+    acc = main_run.get("personaqa_primed", {}).get("accuracy")
+    return acc, _priming_description(main_run, from_primed_block=True)
 
 
 def _plot_personaqa(ours_vals, base_vals, title, outpath):
@@ -321,6 +352,23 @@ def main():
         "Default matches paper's config: flash_attention_2 + per-item "
         "SET injection + set-order distractors.",
     )
+    parser.add_argument(
+        "--ours-primed",
+        type=str,
+        default=None,
+        help="Vector AO primed-collection JSON. If given, its `personaqa.accuracy` "
+        "is used for the primed bar (and its `meta.pqa_*` for the description). "
+        "Default: fall back to `personaqa_primed` in --results.",
+    )
+    parser.add_argument(
+        "--baseline-primed",
+        type=str,
+        default=str(Path(__file__).parent / "archived" / "lora_thirdperson_think.results.json"),
+        help="LoRA AO primed-collection JSON. Default: the tp_think hill-climb "
+        "run (which beats LoRA's default 11.7% → 12.3%), matching the blog "
+        "post's priming figure. Pass empty string to fall back to "
+        "`personaqa_primed` inside --baseline.",
+    )
     parser.add_argument("--model", type=str, default="Qwen3-8B")
     parser.add_argument(
         "--outdir", type=str, default=str(Path(__file__).parent / "figures")
@@ -330,8 +378,8 @@ def main():
         type=str,
         default="fig_eval_comparison",
         help="Output prefix. Produces {prefix}_taboo.png, {prefix}_personaqa.png, "
-        "and — when both inputs carry `personaqa_primed` — {prefix}_priming.png. "
-        "Trailing `.png` is stripped.",
+        "and — when primed data is available for both oracles — "
+        "{prefix}_priming.png. Trailing `.png` is stripped.",
     )
     args = parser.parse_args()
 
@@ -365,14 +413,13 @@ def main():
     )
     _plot_personaqa(ours_pqa, base_pqa, title, outdir / f"{prefix}_personaqa.png")
 
-    ours_primed_open = ours.get("personaqa_primed", {}).get("accuracy")
-    base_primed_open = base.get("personaqa_primed", {}).get("accuracy")
+    ours_primed_open, ours_primed_desc = _load_primed(ours, args.ours_primed)
+    base_primed_open, base_primed_desc = _load_primed(base, args.baseline_primed)
     if ours_primed_open is not None and base_primed_open is not None:
         _plot_priming(
             ours_pqa[0], ours_primed_open,
             base_pqa[0], base_primed_open,
-            _priming_description(ours),
-            _priming_description(base),
+            ours_primed_desc, base_primed_desc,
             title, outdir / f"{prefix}_priming.png",
         )
 
