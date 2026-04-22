@@ -203,6 +203,8 @@ class OracleHooks:
         steering_coef,
         vector_mul: float = 1.0,
         oracle_adapter: str = "dummy",
+        disable_steering: bool = False,
+        disable_injection: bool = False,
     ):
         self.peft_model = peft_model
         # `steering` is None in lora oracle mode (no per-layer steering hooks).
@@ -220,6 +222,10 @@ class OracleHooks:
         # activation collection so LoRA-adapted forward passes aren't contaminated
         # by the oracle's own steering vectors.
         self.oracle_on: bool = False
+        # Ablation gates: skip the trained steering adds / skip activation injection
+        # at placeholder slots while leaving the prompt + hook wiring untouched.
+        self.disable_steering = disable_steering
+        self.disable_injection = disable_injection
         self._handles: list = []
 
     def _layers(self):
@@ -251,7 +257,7 @@ class OracleHooks:
 
     def _attn_hook(self, idx):
         def hook(_m, _i, output):
-            if not self.oracle_on:
+            if not self.oracle_on or self.disable_steering:
                 return output
             v = self.steering["post_attn"][idx]
             h = output[0]
@@ -261,7 +267,7 @@ class OracleHooks:
 
     def _mlp_hook(self, idx):
         def hook(_m, _i, output):
-            if not self.oracle_on:
+            if not self.oracle_on or self.disable_steering:
                 return output
             v = self.steering["post_mlp"][idx]
             return output + (v * self.vector_mul).to(output.dtype).to(output.device)
@@ -276,7 +282,7 @@ class OracleHooks:
         write `new = steered + orig`. Matches the paper's
         `get_hf_activation_steering_hook` exactly (steering_hooks.py:157-193).
         """
-        if not self.oracle_on or self.inject_batch is None:
+        if not self.oracle_on or self.inject_batch is None or self.disable_injection:
             return output
         is_tuple = isinstance(output, tuple)
         hidden = output[0] if is_tuple else output
@@ -1293,6 +1299,20 @@ def main():
         action="store_true",
         help="Skip the Taboo eval (useful for PQA-only collection-prompt sweeps).",
     )
+    parser.add_argument(
+        "--no-steering",
+        action="store_true",
+        help="Ablation: skip the trained per-layer steering vector adds. Prompt + "
+        "hook wiring + activation injection are untouched. In --oracle-mode lora "
+        "this is a no-op (no steering hooks exist).",
+    )
+    parser.add_argument(
+        "--no-injection",
+        action="store_true",
+        help="Ablation: skip rewriting the residual stream at placeholder "
+        "positions. Steering vector adds + prompt structure (placeholder tokens "
+        "still present) are untouched.",
+    )
     args = parser.parse_args()
 
     if args.oracle_mode == "vector" and not args.vectors:
@@ -1461,6 +1481,8 @@ def main():
         steering_coef,
         vector_mul=1.0,
         oracle_adapter=oracle_adapter,
+        disable_steering=args.no_steering,
+        disable_injection=args.no_injection,
     )
     hooks.install()
 
@@ -1478,6 +1500,8 @@ def main():
         "pqa_tokens": list(pqa_tokens),
         "oracle_mode": args.oracle_mode,
         "oracle_lora": args.oracle_lora if args.oracle_mode == "lora" else None,
+        "disable_steering": bool(args.no_steering),
+        "disable_injection": bool(args.no_injection),
         "pqa_user_text": args.pqa_user_text or None,
         "pqa_think_body": args.pqa_think_body or None,
         "pqa_answer": args.pqa_answer or None,

@@ -19,6 +19,7 @@ Minimal reproduction + plotting for the ["trained steering vectors as AOs" post]
 - `make_figures.py` — reads a Vector AO results JSON + LoRA baseline JSON, emits `{prefix}_taboo.png`, `{prefix}_personaqa.png`, and (when both carry `personaqa_primed`) `{prefix}_priming.png` into `figures/`.
 - `make_worked_examples.py` — renders paired Vector / LoRA samples per task into `worked_examples.md` (the post's "Example Activation" section).
 - `summarize_pqa_variants.py` — tabulates PQA open + y/n accuracy across collection-prompt variants (the post's priming table).
+- `make_ablation_figure.py` — renders the full-vs-ablations chart from a full run + three `--no-steering` / `--no-injection` / both runs.
 - `eval_data/` — copies of the paper's `taboo_direct_test.txt` and `personas.jsonl`, so `run_evals.py` has no dependency on `ref_submodules/`.
 
 ## Result JSONs
@@ -37,6 +38,13 @@ Collection-prompt variants for the priming table live in `archived/` (one result
 - `pqa_a_compact.results.json.zst`, `lora_a_compact.results.json.zst` — answer = `"What are {name}'s favorite country, food, drink, music genre, sport, and boardgame?"`
 - `pqa_a_decl.results.json.zst`, `lora_a_decl.results.json.zst` — answer = `"{name}'s favorite country, food, drink, music genre, sport, and boardgame."`
 - `scion_tp_think.results.json.zst`, `fullmix7_tp_think.results.json.zst`, `lora_thirdperson_think.results.json.zst` — `<think>` = `"The user is {name}. They have specific preferences to recall."`
+
+Ablations of the headline Scion checkpoint + the LoRA AO baseline (all in `archived/`):
+
+- `scion_nosteer.results.json.zst` — `run_evals.py --no-steering`: skip the trained per-layer steering vector adds, keep activation injection at `" ?"` placeholders.
+- `scion_noinject.results.json.zst` — `run_evals.py --no-injection`: skip the residual rewrite at placeholder positions, keep steering vector adds.
+- `scion_neither.results.json.zst` — both flags set: pure Qwen3-8B with the prompt format still intact (`Layer: 18\n ? ? ... ? \n{question}`) and the dummy adapter active. This is the "Qwen on its own" floor.
+- `lora_baseline_fa2_noinject.results.json.zst` — `run_evals.py --oracle-mode lora --no-injection`: LoRA AO adapter active but activation injection disabled at placeholder positions.
 
 ## LoRA-baseline y/n noise floor
 
@@ -62,4 +70,14 @@ nix develop -c python3 prelim-report/summarize_pqa_variants.py \
     --baseline prelim-report/ckpts/scion-local02_steering_vectors_final.results.json.zst \
     prelim-report/archived/pqa_t_minimal.results.json.zst prelim-report/archived/pqa_a_compact.results.json.zst \
     prelim-report/archived/pqa_a_decl.results.json.zst prelim-report/archived/scion_tp_think.results.json.zst
+
+# Rebuild the ablation figure
+nix develop -c python3 prelim-report/make_ablation_figure.py \
+    prelim-report/ckpts/scion-local02_steering_vectors_final.results.json.zst \
+    --no-steering prelim-report/archived/scion_nosteer.results.json.zst \
+    --no-injection prelim-report/archived/scion_noinject.results.json.zst \
+    --neither prelim-report/archived/scion_neither.results.json.zst \
+    --lora-full prelim-report/ckpts/lora_baseline_fa2.json.zst \
+    --lora-noinject prelim-report/archived/lora_baseline_fa2_noinject.results.json.zst \
+    --name fig_eval_scion-local02_final_ablation
 ```
