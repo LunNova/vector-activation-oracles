@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.so
+.venv/
+
+# Nix
+result
+result-*
+
+# ML artifacts
+*.pt
+*.bin
+*.safetensors
+wandb/
+outputs/
+checkpoints/
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*~
+
+.claude/
+.direnv/
+
