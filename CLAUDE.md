@@ -28,9 +28,9 @@ python -m src.eval_harness --config configs/first_experiment.json \
 
 # Prelim-report pipeline (self-contained, HF-only — does not import src/)
 nix develop ".#cuda" -c python3 prelim-report/run_evals.py \
-    prelim-report/scion-local02_steering_vectors_final.safetensors
+    prelim-report/ckpts/scion-local02_steering_vectors_final.safetensors
 nix develop -c python3 prelim-report/make_figures.py \
-    prelim-report/scion-local02_steering_vectors_final.results.json \
+    prelim-report/ckpts/scion-local02_steering_vectors_final.results.json.zst \
     --name fig_eval_scion-local02_final
 
 # Lint (ruff is in every devShell)
@@ -85,5 +85,7 @@ Classification CSVs (`geometry_of_truth`, `relations`, `tense`, `singular_plural
 
 Separate from `src/`. `run_evals.py`, `make_figures.py`, `make_worked_examples.py`, `summarize_pqa_variants.py` use **HuggingFace models only** (no `src.model` import) so the post's minimal repro doesn't depend on the custom Qwen3 stack. `eval_data/` has copies of `taboo_direct_test.txt` and `personas.jsonl` so it doesn't need `ref_submodules/` either.
 
-- Two checkpoints checked in: `full-mix-7.safetensors` (AdamW baseline) and `scion-local02_steering_vectors_final.safetensors` (Scion, headline).
+- Subdirs: `ckpts/` (trained Vector AO safetensors + sidecar training configs + their headline `*.results.json.zst` + the committed `lora_baseline_fa2.json.zst`), `figures/` (`fig_eval_*.png` from `make_figures.py`), `archived/` (hill-climb sweep variants, older LoRA baseline snapshots, A/B reruns).
+- Two checkpoints checked in under `ckpts/`: `full-mix-7.safetensors` (AdamW baseline) and `scion-local02_steering_vectors_final.safetensors` (Scion, headline).
 - Results are committed as `*.results.json.zst` (zstd -19). `io_utils.load_json()` accepts either `.json` (fresh) or `.zst` (committed). After running `run_evals.py`, recompress with `zstd -19 --rm` before committing; the plain `.json` is gitignored.
+- `run_evals.py`'s y/n distractor sampling is `PYTHONHASHSEED`-dependent (distractors pulled from a `set`, pattern inherited from the paper's `personaqa_yes_no_eval.py`). Fresh runs drift the LoRA-baseline y/n number by ~3pp; the committed `ckpts/lora_baseline_fa2.json.zst` is the highest of four observed runs (68.0%).

@@ -8,7 +8,7 @@ Emits two PNGs that share a prefix: `{prefix}_taboo.png` (exact + semantic-nearb
 stacked) and `{prefix}_personaqa.png` (open-ended + y/n flat accuracy).
 
 Usage:
-    python prelim-report/make_figures.py prelim-report/full-mix-7.results.json
+    python prelim-report/make_figures.py prelim-report/ckpts/full-mix-7.results.json
 """
 
 import argparse
@@ -316,13 +316,15 @@ def main():
     parser.add_argument(
         "--baseline",
         type=str,
-        default=str(Path(__file__).parent / "lora_baseline_fa2.json"),
+        default=str(Path(__file__).parent / "ckpts" / "lora_baseline_fa2.json"),
         help="LoRA AO baseline JSON (from run_evals.py --oracle-mode lora). "
         "Default matches paper's config: flash_attention_2 + per-item "
         "SET injection + set-order distractors.",
     )
     parser.add_argument("--model", type=str, default="Qwen3-8B")
-    parser.add_argument("--outdir", type=str, default=str(Path(__file__).parent))
+    parser.add_argument(
+        "--outdir", type=str, default=str(Path(__file__).parent / "figures")
+    )
     parser.add_argument(
         "--name",
         type=str,

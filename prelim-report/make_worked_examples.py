@@ -8,8 +8,8 @@ oracle probe prompt, and both oracles' responses side-by-side.
 
 Usage:
     python prelim-report/make_worked_examples.py \
-        --baseline prelim-report/lora_baseline_fa2.json \
-        --vector prelim-report/full-mix-7.results.json \
+        --baseline prelim-report/ckpts/lora_baseline_fa2.json \
+        --vector prelim-report/ckpts/full-mix-7.results.json \
         --output prelim-report/worked_examples.md
 """
 

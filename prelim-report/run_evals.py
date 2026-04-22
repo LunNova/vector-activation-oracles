@@ -30,7 +30,7 @@ LoRA adapter active; the oracle runs on the same weights with that adapter
 swapped out for a no-op `dummy` adapter.
 
 Usage:
-    python prelim-report/run_evals.py prelim-report/full-mix-7.safetensors
+    python prelim-report/run_evals.py prelim-report/ckpts/full-mix-7.safetensors
 """
 
 import argparse
