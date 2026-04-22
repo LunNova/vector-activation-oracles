@@ -1,0 +1,45 @@
+{
+    "model_name": "Qwen3-8B",
+    "model": {
+        "n_layer": 36,
+        "n_head": 32,
+        "n_kv_head": 8,
+        "n_embd": 4096,
+        "intermediate_size": 12288,
+        "vocab_size": 151936,
+        "rope_base": 1000000.0,
+        "norm_eps": 1e-6,
+        "max_seq_len": 4096
+    },
+    "dtype": "bfloat16",
+
+    "injection_layer": 1,
+    "steering_coefficient": 1.0,
+    "activation_layer_pcts": [0.25, 0.5, 0.75],
+    "vector_init_scale": 0.01,
+    "vector_l2_weight": 0.0,
+    "weight_decay": 0.01,
+
+    "lr": 5e-4,
+    "batch_size": 32,
+    "gradient_accumulation_steps": 1,
+    "num_epochs": 4,
+    "warmup_ratio": 0.1,
+    "max_grad_norm": 1.0,
+    "seed": 42,
+
+    "datasets": ["sst2", "snli", "language_identification", "geometry_of_truth", "relations", "ner", "tense", "md_gender", "ag_news", "singular_plural"],
+    "num_train": 6000,
+    "num_test": 250,
+    "classification_variants": [
+        {"min_k": 1, "max_k": 20, "num_qa_per_sample": 1}
+    ],
+    "max_context_len": 512,
+
+    "eval_steps": 250,
+    "save_steps": 1000,
+    "data_dir": "../vector-activation-oracles-data",
+    "output_dir": "../vector-activation-oracles-data/outputs/first_experiment",
+    "wandb_project": "meta_activation_oracles",
+    "wandb_run_name": "steering_ao_sst2_qwen3_8b"
+}

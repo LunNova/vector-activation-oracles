@@ -1,0 +1,3 @@
+[submodule "ref_submodules/activation_oracles"]
+	path = ref_submodules/activation_oracles
+	url = https://github.com/adamkarvonen/activation_oracles.git

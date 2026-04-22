@@ -31,6 +31,7 @@
         ps.pyyaml
         ps.tqdm
         ps.matplotlib
+        ps.zstandard
       ];
 
       gpuPythonPkgs =
@@ -96,9 +97,6 @@
               rocmPackages.rocprof-trace-decoder
               rocmPackages.aqlprofile
               rocmPackages.rdc
-
-              # TODO: aiter for MI350 MXFP4/MXFP6 fast ops — see ../hiring-challenges/amd-gpu-mode-hackathon-202603/aiter.nix
-              # (ps.callPackage ./aiter.nix { inherit (pkgs) rocmPackages; })
 
               (python3.withPackages gpuPythonPkgs)
             ]);

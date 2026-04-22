@@ -1,0 +1,120 @@
+{
+  "model_name": "Qwen3-8B",
+  "model": {
+    "n_layer": 36,
+    "n_head": 32,
+    "n_kv_head": 8,
+    "n_embd": 4096,
+    "intermediate_size": 12288,
+    "vocab_size": 151936,
+    "rope_base": 1000000.0,
+    "norm_eps": 1e-06,
+    "max_seq_len": 4096
+  },
+  "dtype": "bfloat16",
+  "injection_layer": 1,
+  "steering_coefficient": 1.0,
+  "activation_layer_pcts": [
+    0.25,
+    0.5,
+    0.75
+  ],
+  "vector_init_scale": 0.01,
+  "vector_l2_weight": 0.0,
+  "weight_decay": 0.1,
+  "injection_points": [
+    "post_attn",
+    "post_mlp"
+  ],
+  "optimizer": "adamw",
+  "lr": 0.01,
+  "batch_size": 32,
+  "gradient_accumulation_steps": 16,
+  "num_epochs": 3,
+  "warmup_ratio": 0.02,
+  "cooldown_ratio": 0.35,
+  "lr_schedule": "wsd",
+  "max_grad_norm": 1.0,
+  "fisher_beta": 0.99,
+  "fisher_damping": 0.0001,
+  "fisher_momentum": 0.9,
+  "activation_collection_batch_size": 64,
+  "compile": false,
+  "seed": 42,
+  "datasets": [
+    "sst2",
+    "snli",
+    "language_identification",
+    "geometry_of_truth",
+    "relations",
+    "ner",
+    "tense",
+    "md_gender",
+    "ag_news",
+    "singular_plural"
+  ],
+  "train_datasets": [
+    "geometry_of_truth",
+    "relations",
+    "sst2",
+    "singular_plural",
+    "snli",
+    "ner",
+    "tense"
+  ],
+  "num_train": 6000,
+  "num_test": 250,
+  "classification_variants": [
+    {
+      "min_k": 1,
+      "max_k": 1,
+      "num_qa_per_sample": 2
+    },
+    {
+      "min_k": 1,
+      "max_k": 50,
+      "num_qa_per_sample": 1
+    }
+  ],
+  "max_context_len": 512,
+  "answer_format_diversity": true,
+  "supervise_think_tokens": true,
+  "context_prediction_variants": [
+    {
+      "num_raw": 100000,
+      "min_k_acts": 1,
+      "max_k_acts": 1,
+      "min_k_tokens": 1,
+      "max_k_tokens": 50
+    },
+    {
+      "num_raw": 100000,
+      "min_k_acts": 1,
+      "max_k_acts": 50,
+      "min_k_tokens": 1,
+      "max_k_tokens": 50
+    }
+  ],
+  "spqa_train": -1,
+  "max_answer_tokens": 96,
+  "max_num_positions": 96,
+  "data_dir": "../meta-activation-oracles-data",
+  "eval_steps": 250,
+  "save_steps": 2000,
+  "output_dir": "../meta-activation-oracles-data/outputs/full-mix-7",
+  "wandb_project": "meta_activation_oracles",
+  "wandb_run_name": "full-mix-7",
+  "wandb_group": "",
+  "taboo_words": [
+    "ship",
+    "wave",
+    "song",
+    "snow",
+    "rock",
+    "moon",
+    "salt",
+    "blue"
+  ],
+  "taboo_lora_template": "adamkarvonen/Qwen3-8B-taboo-{word}_50_mix",
+  "taboo_probe_prompts": 8
+}

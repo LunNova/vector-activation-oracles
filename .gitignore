@@ -19,6 +19,15 @@ wandb/
 outputs/
 checkpoints/
 
+# Commit the two trained Vector AOs backing the prelim-report figures.
+!prelim-report/full-mix-7.safetensors
+!prelim-report/scion-local02_steering_vectors_final.safetensors
+
+# Commit zstd-compressed result JSONs; the plain form from run_evals.py
+# is regenerable and should not be checked in.
+prelim-report/*.results.json
+prelim-report/lora_baseline_fa2.json
+
 # Editors
 .idea/
 .vscode/
