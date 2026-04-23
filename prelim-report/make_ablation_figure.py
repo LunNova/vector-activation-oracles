@@ -47,7 +47,7 @@ BAR_ORDER = [
     ("vec_full", "Vector AO — full", VEC_FULL),
     ("vec_nosteer", "Vector AO — no steering", VEC_NO_STEER),
     ("vec_noinject", "Vector AO — no injection", VEC_NO_INJECT),
-    ("vec_neither", "Vector AO — neither (Qwen + placeholder)", VEC_NEITHER),
+    ("vec_neither", "Nothing — Qwen + placeholder prompt", VEC_NEITHER),
     ("lora_full", "LoRA AO — full", LORA_FULL),
     ("lora_noinject", "LoRA AO — no injection", LORA_NO_INJECT),
 ]
@@ -87,6 +87,15 @@ def main():
         "reference bar per task. Optional.",
     )
     parser.add_argument(
+        "--lora-full-primed-file", type=str,
+        default=str(Path(__file__).parent / "archived" / "lora_thirdperson_think.results.json"),
+        help="Separate run file used only for the LoRA AO full's PQA-open "
+        "primed bar. Default: tp_think hill-climb run (12.3% — LoRA's best-in-"
+        "sweep prime). Pass empty string to instead pull from --lora-full's "
+        "own personaqa_primed (which matches the Vector-winning prime and is "
+        "~10.5% for LoRA).",
+    )
+    parser.add_argument(
         "--lora-noinject", type=str, default=None,
         help="LoRA AO with --no-injection. Optional.",
     )
@@ -110,6 +119,17 @@ def main():
         runs["lora_full"] = load_json(args.lora_full)
     if args.lora_noinject:
         runs["lora_noinject"] = load_json(args.lora_noinject)
+
+    # Override map: (run_key, task_key) -> (results_dict, use_primed_block).
+    # Used so the LoRA-full PQA-open bar can pull from the tp_think separate
+    # run (its `personaqa.accuracy` = 12.3%) instead of the Vector-winning
+    # prime inside lora_baseline_fa2 (`personaqa_primed.accuracy` = 10.5%).
+    # This matches the priming figure's convention of each oracle getting its
+    # own best-in-sweep prime.
+    overrides: dict = {}
+    if "lora_full" in runs and args.lora_full_primed_file:
+        tp = load_json(args.lora_full_primed_file)
+        overrides[("lora_full", "personaqa")] = (tp, False)
 
     # Sanity-check ablation metas match what the filenames claim.
     vec_expected = {
@@ -139,11 +159,17 @@ def main():
     n_bars = len(active_bars)
     width = 0.80 / n_bars  # total group width stays ~0.8
 
+    def _val(run_key, task_key, use_primed):
+        if (run_key, task_key) in overrides:
+            d, p = overrides[(run_key, task_key)]
+            return _task_acc(d, task_key, p)
+        return _task_acc(runs[run_key], task_key, use_primed)
+
     fig, ax = plt.subplots(figsize=(11, 5.5))
     for bi, (run_key, label, color) in enumerate(active_bars):
         offset = (bi - (n_bars - 1) / 2) * width
         vals = [
-            _task_acc(runs[run_key], tk, primed) or 0.0
+            _val(run_key, tk, primed) or 0.0
             for tk, _, primed in TASKS
         ]
         bars = ax.bar(
@@ -182,7 +208,7 @@ def main():
     for tk, tlabel, primed in TASKS:
         row = f"  {tlabel.replace(chr(10), ' '):<28s}"
         for run_key, _, _ in active_bars:
-            v = _task_acc(runs[run_key], tk, primed)
+            v = _val(run_key, tk, primed)
             row += f" {v:>{col_w}.1%}" if v is not None else f" {'n/a':>{col_w}s}"
         print(row)
 

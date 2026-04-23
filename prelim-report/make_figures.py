@@ -365,9 +365,10 @@ def main():
         type=str,
         default=str(Path(__file__).parent / "archived" / "lora_thirdperson_think.results.json"),
         help="LoRA AO primed-collection JSON. Default: the tp_think hill-climb "
-        "run (which beats LoRA's default 11.7% → 12.3%), matching the blog "
-        "post's priming figure. Pass empty string to fall back to "
-        "`personaqa_primed` inside --baseline.",
+        "run (which is LoRA AO's best-in-sweep prime — 11.7% → 12.3%). Each "
+        "oracle gets its own winning prime so the figure shows best-case "
+        "priming per oracle. Pass empty string to fall back to "
+        "`personaqa_primed` inside --baseline for a same-prime comparison.",
     )
     parser.add_argument("--model", type=str, default="Qwen3-8B")
     parser.add_argument(
